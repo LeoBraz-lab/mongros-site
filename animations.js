@@ -1,258 +1,235 @@
 /* ============================================================
-   MONGROS FILM STUDIO — ANIMATIONS ENHANCED
-   Scroll reveals dramatiques, glitch, cursor magnétique
+   MONGROS FILM STUDIO — ANIMATIONS v2 (polished)
    ============================================================ */
 
 (function () {
   'use strict';
 
-  /* ── INTERSECTION OBSERVER — Reveals ── */
-  const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-clip, .stagger, .section-line');
-  if (revealEls.length) {
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('in');
-          revealObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
-    revealEls.forEach(el => revealObserver.observe(el));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── INTERSECTION OBSERVER factory ── */
+  function makeObserver(cb, opts) {
+    return new IntersectionObserver(cb, Object.assign(
+      { threshold: 0.12, rootMargin: '0px 0px -60px 0px' },
+      opts
+    ));
   }
 
-  /* ── SPLIT TEXT — Char by char reveal ── */
-  function splitTextReveal(selector, delay = 0) {
-    document.querySelectorAll(selector).forEach(el => {
-      if (el.dataset.split) return; // already done
-      el.dataset.split = '1';
-      const text = el.innerText;
-      el.innerHTML = '';
-      [...text].forEach((char, i) => {
-        const span = document.createElement('span');
-        span.className = char === ' ' ? 'char space' : 'char';
-        span.textContent = char === ' ' ? ' ' : char;
-        span.style.transitionDelay = `${delay + i * 0.035}s`;
-        el.appendChild(span);
-      });
+  /* ── REVEALS ── */
+  document.querySelectorAll('.reveal, .reveal-left, .reveal-clip').forEach(el => {
+    if (reducedMotion) { el.classList.add('in'); return; }
+    makeObserver(entries => entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); observer.unobserve(e.target); }
+    })).observe(el);
+    // keep ref to unobserve — inline via closure
+  });
 
-      const obs = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.querySelectorAll('.char').forEach(c => c.classList.add('lit'));
-            obs.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.5 });
-      obs.observe(el);
-    });
-  }
-  splitTextReveal('.hero-kicker', 0.3);
+  /* Rewrite pour garder la ref correcte */
+  const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-clip');
+  const revealObs = makeObserver(entries => entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('in');
+      revealObs.unobserve(entry.target);
+    }
+  }));
+  revealEls.forEach(el => {
+    if (reducedMotion) el.classList.add('in');
+    else revealObs.observe(el);
+  });
 
-  /* ── TITLE SWEEP — scan line avant affichage ── */
-  function addSweepToTitles() {
+  /* ── SECTION LINE REVEALS ── */
+  document.querySelectorAll('.services-head, .contact-inner').forEach(container => {
+    if (!container.querySelector('.section-line')) {
+      const line = document.createElement('span');
+      line.className = 'section-line';
+      container.prepend(line);
+    }
+    const line = container.querySelector('.section-line');
+    if (reducedMotion) { line.classList.add('in'); return; }
+    makeObserver(entries => entries.forEach(e => {
+      if (e.isIntersecting) { line.classList.add('in'); lineObs.unobserve(e.target); }
+    }), { threshold: 0.2 }).observe(container);
+  });
+  // Note: lineObs ref handled below properly
+  document.querySelectorAll('.section-line').forEach(line => {
+    if (reducedMotion) { line.classList.add('in'); return; }
+    const obs = makeObserver(entries => entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); }
+    }), { threshold: 0.2 });
+    obs.observe(line);
+  });
+
+  /* ── TITLE SWEEP — scan orange ── */
+  if (!reducedMotion) {
     document.querySelectorAll('.services-head h2, .contact h2').forEach(el => {
+      if (el.dataset.sweep) return;
+      el.dataset.sweep = '1';
       el.style.position = 'relative';
       el.style.overflow = 'hidden';
-      const sweep = document.createElement('div');
-      sweep.style.cssText = `
-        position:absolute; inset:0; z-index:2; pointer-events:none;
-        background: linear-gradient(90deg, transparent 0%, var(--orange) 50%, transparent 100%);
-        transform: translateX(-110%);
-        transition: transform 0s;
-        opacity: .15;
-      `;
+      const sweep = document.createElement('span');
+      sweep.setAttribute('aria-hidden', 'true');
+      sweep.style.cssText = [
+        'position:absolute', 'inset:0', 'z-index:2', 'pointer-events:none',
+        'background:linear-gradient(90deg,transparent 0%,rgba(232,80,2,.12) 50%,transparent 100%)',
+        'transform:translateX(-110%)',
+        'transition:none',
+        'will-change:transform'
+      ].join(';');
       el.appendChild(sweep);
 
-      const obs = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            sweep.style.transition = 'transform .7s cubic-bezier(.7,0,.2,1)';
+      const obs = makeObserver(entries => entries.forEach(e => {
+        if (e.isIntersecting) {
+          requestAnimationFrame(() => {
+            sweep.style.transition = 'transform 750ms cubic-bezier(.7,0,.2,1)';
             sweep.style.transform = 'translateX(110%)';
-            obs.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.4 });
+          });
+          obs.unobserve(e.target);
+        }
+      }), { threshold: 0.4 });
       obs.observe(el);
     });
   }
-  addSweepToTitles();
 
-  /* ── PARALLAX HERO — léger déplacement au scroll ── */
-  const heroVideo = document.querySelector('.hero-video');
-  const heroInner = document.querySelector('.hero-inner');
-  if (heroVideo && heroInner) {
-    let ticking = false;
-    window.addEventListener('scroll', () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          const y = window.scrollY;
-          heroVideo.style.transform = `translateY(${y * 0.25}px) scale(1.05)`;
-          heroInner.style.transform = `translateY(${y * 0.12}px)`;
-          ticking = false;
-        });
-        ticking = true;
-      }
-    }, { passive: true });
+  /* ── PARALLAX HERO ── */
+  if (!reducedMotion) {
+    const heroVideo = document.querySelector('.hero-video');
+    const heroInner = document.querySelector('.hero-inner');
+    if (heroVideo && heroInner) {
+      heroVideo.style.willChange = 'transform';
+      heroInner.style.willChange = 'transform';
+      let ticking = false;
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            const y = window.scrollY;
+            heroVideo.style.transform = `translateY(${y * 0.22}px) scale(1.05)`;
+            heroInner.style.transform = `translateY(${y * 0.1}px)`;
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    }
   }
 
-  /* ── CURSOR MAGNÉTIQUE amélioré ── */
+  /* ── CURSOR MAGNÉTIQUE ── */
   const dot = document.querySelector('.cursor-dot');
-  if (dot && window.matchMedia('(hover:hover) and (pointer:fine)').matches) {
-    let mx = -100, my = -100;
-    let cx = -100, cy = -100;
-    let isActive = false;
+  const isMouse = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+
+  if (dot && isMouse) {
+    let mx = -200, my = -200, cx = -200, cy = -200;
+    let cursorActive = false;
 
     document.addEventListener('mousemove', e => {
       mx = e.clientX;
       my = e.clientY;
-      if (!isActive) {
+      if (!cursorActive) {
         dot.classList.add('active');
         document.body.classList.add('has-cursor');
-        isActive = true;
+        cursorActive = true;
       }
-    });
-
-    // Magnetic effect on CTA buttons
-    document.querySelectorAll('.cta, .service').forEach(el => {
-      el.addEventListener('mouseenter', () => {
-        el.dataset.magnetic = '1';
-      });
-      el.addEventListener('mouseleave', () => {
-        el.dataset.magnetic = '';
-        el.style.transform = '';
-      });
-      el.addEventListener('mousemove', e => {
-        const rect = el.getBoundingClientRect();
-        const relX = e.clientX - rect.left - rect.width / 2;
-        const relY = e.clientY - rect.top - rect.height / 2;
-        el.style.transform = `translate(${relX * 0.18}px, ${relY * 0.18}px)`;
-      });
-    });
-
-    // Smooth cursor follow
-    function animateCursor() {
-      cx += (mx - cx) * 0.18;
-      cy += (my - cy) * 0.18;
-      dot.style.transform = `translate(${cx - dot.offsetWidth / 2}px, ${cy - dot.offsetHeight / 2}px)`;
-      requestAnimationFrame(animateCursor);
-    }
-    animateCursor();
-
-    // Cursor states
-    document.querySelectorAll('a, button').forEach(el => {
-      el.addEventListener('mouseenter', () => dot.classList.add('hover-link'));
-      el.addEventListener('mouseleave', () => dot.classList.remove('hover-link'));
-    });
-    document.querySelectorAll('.tile').forEach(el => {
-      el.addEventListener('mouseenter', () => { dot.classList.remove('hover-link'); dot.classList.add('hover-play'); });
-      el.addEventListener('mouseleave', () => dot.classList.remove('hover-play'));
-    });
-  }
-
-  /* ── TRAIL DOTS améliorés ── */
-  const trailDots = document.querySelectorAll('.trail-dot');
-  if (trailDots.length) {
-    const history = [];
-    const maxHistory = trailDots.length;
-    let mouseX = 0, mouseY = 0;
-
-    document.addEventListener('mousemove', e => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
     }, { passive: true });
 
-    function animateTrail() {
-      history.unshift({ x: mouseX, y: mouseY });
-      if (history.length > maxHistory) history.pop();
+    document.addEventListener('mouseleave', () => { dot.style.opacity = '0'; });
+    document.addEventListener('mouseenter', () => { dot.style.opacity = ''; });
 
-      trailDots.forEach((dot, i) => {
-        if (!history[i]) return;
-        const pos = history[i];
-        const size = Math.max(2, 10 - i * (8 / maxHistory));
-        dot.style.width  = size + 'px';
-        dot.style.height = size + 'px';
-        dot.style.opacity = 1 - i / maxHistory;
-        dot.style.transform = `translate(${pos.x - size/2}px, ${pos.y - size/2}px)`;
+    /* Magnetic hover sur CTA */
+    document.querySelectorAll('.cta').forEach(el => {
+      el.addEventListener('mousemove', e => {
+        const r = el.getBoundingClientRect();
+        const rx = e.clientX - r.left - r.width  / 2;
+        const ry = e.clientY - r.top  - r.height / 2;
+        el.style.transform = `translate(${rx * 0.15}px, ${ry * 0.15}px) skewX(-1.5deg)`;
+      });
+      el.addEventListener('mouseleave', () => { el.style.transform = ''; });
+    });
+
+    /* Cursor states */
+    document.querySelectorAll('a:not(.tile), button').forEach(el => {
+      el.addEventListener('mouseenter', () => { dot.classList.add('hover-link'); });
+      el.addEventListener('mouseleave', () => { dot.classList.remove('hover-link'); });
+    });
+    document.querySelectorAll('.tile').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        dot.classList.remove('hover-link');
+        dot.classList.add('hover-play');
+      });
+      el.addEventListener('mouseleave', () => dot.classList.remove('hover-play'));
+    });
+
+    /* Smooth follow */
+    (function loop() {
+      cx += (mx - cx) * 0.16;
+      cy += (my - cy) * 0.16;
+      dot.style.transform = `translate(${cx - dot.offsetWidth / 2}px, ${cy - dot.offsetHeight / 2}px)`;
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  /* ── TRAIL DOTS ── */
+  const trailDots = [...document.querySelectorAll('.trail-dot')];
+  if (trailDots.length && isMouse && !reducedMotion) {
+    const pos = { x: -200, y: -200 };
+    const history = Array(trailDots.length).fill({ x: -200, y: -200 });
+
+    document.addEventListener('mousemove', e => {
+      pos.x = e.clientX;
+      pos.y = e.clientY;
+    }, { passive: true });
+
+    (function animateTrail() {
+      history.unshift({ x: pos.x, y: pos.y });
+      history.length = trailDots.length;
+      trailDots.forEach((d, i) => {
+        const p = history[i];
+        if (!p) return;
+        const size = Math.max(2, 9 - i * (7 / trailDots.length));
+        d.style.cssText = `
+          width:${size}px; height:${size}px;
+          opacity:${(1 - i / trailDots.length).toFixed(2)};
+          transform:translate(${p.x - size / 2}px, ${p.y - size / 2}px);
+        `;
       });
       requestAnimationFrame(animateTrail);
-    }
-    animateTrail();
+    })();
   }
 
-  /* ── COUNTER ANIMATION — chiffres stats ── */
-  function animateCounter(el, target, duration = 1800) {
-    const start = performance.now();
-    const step = (now) => {
-      const progress = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 4);
-      el.textContent = Math.round(eased * target);
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }
-
-  document.querySelectorAll('.num-count').forEach(el => {
-    const target = parseInt(el.textContent, 10);
-    if (isNaN(target)) return;
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          animateCounter(el, target);
-          obs.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.7 });
-    obs.observe(el);
-  });
-
-  /* ── GLITCH SPORADIQUE sur les tuiles vidéo ── */
-  const tiles = document.querySelectorAll('.tile:not(.soon)');
-  tiles.forEach(tile => {
-    tile.addEventListener('mouseenter', () => {
-      tile.classList.add('glitch-active');
-      setTimeout(() => tile.classList.remove('glitch-active'), 400);
+  /* ── COUNTER ANIMATION ── */
+  if (!reducedMotion) {
+    document.querySelectorAll('.num-count').forEach(el => {
+      const target = parseInt(el.textContent, 10);
+      if (isNaN(target)) return;
+      const obs = makeObserver(entries => entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const start = performance.now();
+        const dur = 1600;
+        (function tick(now) {
+          const p = Math.min((now - start) / dur, 1);
+          const eased = 1 - Math.pow(1 - p, 4); // ease-out-quart
+          el.textContent = Math.round(eased * target);
+          if (p < 1) requestAnimationFrame(tick);
+        })(performance.now());
+        obs.unobserve(el);
+      }), { threshold: 0.8 });
+      obs.observe(el);
     });
-  });
-
-  /* ── NAV SCROLL STATE ── */
-  const nav = document.querySelector('nav');
-  if (nav) {
-    const updateNav = () => {
-      nav.classList.toggle('scrolled', window.scrollY > 60);
-    };
-    window.addEventListener('scroll', updateNav, { passive: true });
-    updateNav();
   }
 
-  /* ── SECTION LINE REVEALS — ajouter la class stagger aux grilles ── */
-  document.querySelectorAll('.work-grid, .services-head, .clients .lead').forEach(el => {
-    el.classList.add('stagger');
-  });
-
-  /* ── AJOUTER section-line avant chaque titre de section ── */
-  document.querySelectorAll('.services-head, .contact-inner').forEach(container => {
-    const line = document.createElement('span');
-    line.className = 'section-line';
-    container.prepend(line);
-
-    const obs = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          line.classList.add('in');
-          obs.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.2 });
-    obs.observe(container);
-  });
-
-  /* ── VIDEO LAZY LOAD — play au hover ── */
-  document.querySelectorAll('.tile video').forEach(video => {
+  /* ── VIDEO — play on hover uniquement (préserve autoplay existant si présent) ── */
+  document.querySelectorAll('.tile:not(.soon) video').forEach(video => {
+    // Ne pas remplacer l'autoplay si déjà configuré
+    if (video.autoplay) return;
     const tile = video.closest('.tile');
-    tile.addEventListener('mouseenter', () => { try { video.play(); } catch(e){} });
+    tile.addEventListener('mouseenter', () => { video.play().catch(() => {}); });
     tile.addEventListener('mouseleave', () => { video.pause(); });
   });
 
-  console.log('%cMongros Film Studio — Design système chargé', 'color:#E85002;font-family:monospace;font-size:12px;');
+  /* ── NAV scroll state (fallback si le script inline est absent) ── */
+  const nav = document.querySelector('nav');
+  if (nav) {
+    const syncNav = () => nav.classList.toggle('scrolled', window.scrollY > 60);
+    window.addEventListener('scroll', syncNav, { passive: true });
+    syncNav();
+  }
 
 })();

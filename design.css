@@ -1,11 +1,22 @@
 /* ============================================================
-   MONGROS FILM STUDIO — DESIGN OVERRIDE
+   MONGROS FILM STUDIO — DESIGN OVERRIDE v2 (polished)
    Direction : Brut / Cinématique / Grain / Glitch
    Typo : Bebas Neue (display) + Syne (body) + DM Mono (labels)
    ============================================================ */
 
-/* ---- FONTS ---- */
+/* ---- FONTS (display:swap pour éviter FOIT) ---- */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+/* ---- EASING TOKENS ---- */
+:root {
+  --ease-out-expo: cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out:   cubic-bezier(.45, 0, .55, 1);
+  --ease-snap:     cubic-bezier(.7,  0, .2, 1);
+  --dur-fast:  200ms;
+  --dur-mid:   400ms;
+  --dur-slow:  900ms;
+  --dur-crawl: 1100ms;
+}
 
 /* ---- RESET FONTS ---- */
 body {
@@ -15,56 +26,73 @@ body {
 }
 
 /* ============================================================
-   SCANLINES — couche globale cinéma
+   SCANLINES — GPU-accelerated (transform, pas background-position)
    ============================================================ */
-body::after {
+body::before {
   content: '';
   position: fixed;
-  inset: 0;
-  z-index: 9998;
+  inset: -50% 0 0;          /* oversized : translateY n'expose pas les bords */
+  height: 200%;
+  z-index: 9997;
   pointer-events: none;
+  will-change: transform;
   background: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 2px,
-    rgba(0,0,0,.08) 2px,
-    rgba(0,0,0,.08) 4px
+    rgba(0,0,0,.07) 2px,
+    rgba(0,0,0,.07) 4px
   );
-  animation: scanroll 8s linear infinite;
+  background-size: 100% 4px;
+  animation: scanroll 10s linear infinite;
 }
 @keyframes scanroll {
-  from { background-position: 0 0; }
-  to   { background-position: 0 100px; }
+  from { transform: translateY(0); }
+  to   { transform: translateY(50%); }
 }
-@media(prefers-reduced-motion:reduce){ body::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
+}
 
 /* ============================================================
-   GRAIN — version animée + plus dense
+   GRAIN — animé, GPU-accelerated
    ============================================================ */
 .grain {
-  opacity: .09 !important;
-  animation: grainShift 0.4s steps(4) infinite !important;
+  opacity: .08 !important;
+  will-change: transform;
+  animation: grainShift .45s steps(4) infinite !important;
+}
+.grain-strong {
+  opacity: .2 !important;
+  will-change: transform;
+  animation: grainShift .3s steps(3) infinite !important;
 }
 @keyframes grainShift {
-  0%   { transform: translate(0,0); }
-  25%  { transform: translate(-3%,2%); }
-  50%  { transform: translate(2%,-3%); }
-  75%  { transform: translate(-1%,3%); }
-  100% { transform: translate(3%,-1%); }
+  0%   { transform: translate(0,    0); }
+  25%  { transform: translate(-3%,  2%); }
+  50%  { transform: translate( 2%, -3%); }
+  75%  { transform: translate(-1%,  3%); }
+  100% { transform: translate( 3%, -1%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .grain, .grain-strong { animation: none !important; }
 }
 
 /* ============================================================
-   NAV — redesign épuré + typo Syne
+   NAV
    ============================================================ */
 nav {
-  padding: 18px 48px !important;
+  padding: 20px 48px !important;
   background: transparent !important;
-  transition: background .5s ease, padding .5s ease !important;
+  transition:
+    background var(--dur-mid) var(--ease-in-out),
+    padding    var(--dur-mid) var(--ease-in-out) !important;
 }
 nav.scrolled {
-  background: rgba(5,5,5,.95) !important;
-  backdrop-filter: blur(20px) saturate(1.5) !important;
-  border-bottom: 1px solid rgba(232,80,2,.2) !important;
+  background: rgba(5,5,5,.96) !important;
+  backdrop-filter: blur(20px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.6) !important;
+  border-bottom: 1px solid rgba(232,80,2,.18) !important;
   padding: 12px 48px !important;
 }
 nav .links a {
@@ -72,18 +100,30 @@ nav .links a {
   font-size: 11px !important;
   letter-spacing: 3px !important;
   font-weight: 500 !important;
-  color: rgba(249,249,249,.7) !important;
-  transition: color .3s ease !important;
+  color: rgba(249,249,249,.65) !important;
+  transition: color var(--dur-fast) var(--ease-out-expo) !important;
 }
-nav .links a:hover { color: #fff !important; }
+nav .links a:hover,
+nav .links a:focus-visible {
+  color: #fff !important;
+  outline: none !important;
+}
+nav .links a:focus-visible::after {
+  width: 100% !important; /* soulignement visible au focus clavier */
+}
 nav .links a::after {
   background: var(--orange) !important;
   height: 2px !important;
-  bottom: -6px !important;
+  bottom: -5px !important;
+  transition: width var(--dur-mid) var(--ease-snap) !important;
+}
+@media (max-width: 860px) {
+  nav { padding: 16px 20px !important; }
+  nav.scrolled { padding: 12px 20px !important; }
 }
 
 /* ============================================================
-   HERO — titres en Bebas Neue, scan line sur entrée
+   HERO
    ============================================================ */
 .hero-kicker {
   font-family: 'DM Mono', monospace !important;
@@ -94,19 +134,21 @@ nav .links a::after {
 }
 .hero-title {
   font-family: 'Bebas Neue', sans-serif !important;
-  font-size: clamp(72px, 17vw, 280px) !important;
+  font-size: clamp(70px, 16vw, 260px) !important;
   line-height: .88 !important;
   letter-spacing: 2px !important;
 }
 .hero-meta .stat {
   font-family: 'Bebas Neue', sans-serif !important;
   font-size: 44px !important;
+  line-height: 1 !important;
 }
 .hero-meta p {
   font-family: 'Syne', sans-serif !important;
   font-size: 13px !important;
   line-height: 1.8 !important;
-  letter-spacing: .3px !important;
+  letter-spacing: .2px !important;
+  max-width: 56ch !important; /* ~65ch optimal pour lecture — légèrement réduit car sidebar */
 }
 .hero-meta .stat span {
   font-family: 'DM Mono', monospace !important;
@@ -114,78 +156,100 @@ nav .links a::after {
   letter-spacing: 4px !important;
 }
 
-/* Coin glitch — animation sur le hero */
+/* Coins glitch */
 .hero-corner {
-  animation: cornerPulse 4s ease-in-out infinite !important;
+  animation: cornerPulse 5s ease-in-out infinite !important;
 }
-.hero-corner.tr { animation-delay: 1s !important; }
-.hero-corner.bl { animation-delay: 2s !important; }
-.hero-corner.br { animation-delay: 3s !important; }
+.hero-corner.tr { animation-delay: 1.2s !important; }
+.hero-corner.bl { animation-delay: 2.4s !important; }
+.hero-corner.br { animation-delay: 3.6s !important; }
 @keyframes cornerPulse {
-  0%,100% { opacity: 1; border-color: var(--orange); }
-  48%     { opacity: .2; border-color: #ff3300; }
-  50%     { opacity: 1; border-color: #00d4ff; }
-  52%     { opacity: .2; border-color: var(--orange); }
+  0%,100% { opacity: 1;  border-color: var(--orange); }
+  46%     { opacity: .15; border-color: #ff2200; }
+  48%     { opacity: 1;  border-color: #00d4ff; }
+  50%     { opacity: .15; border-color: var(--orange); }
+  52%     { opacity: 1;  border-color: var(--orange); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-corner { animation: none !important; }
+}
+
+/* Scroll hint */
+.scroll-hint {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 9px !important;
+  letter-spacing: 4px !important;
 }
 
 /* ============================================================
-   MARQUEE — plus brutal
+   MARQUEE
    ============================================================ */
 .marquee {
   padding: 18px 0 !important;
   background: var(--orange) !important;
-  position: relative;
+  position: relative !important;
   overflow: hidden !important;
 }
+/* grille verticale brutale par-dessus */
 .marquee::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    90deg, rgba(0,0,0,.12) 0, rgba(0,0,0,.12) 1px, transparent 1px, transparent 40px
-  );
   pointer-events: none;
   z-index: 1;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0,0,0,.1) 0,
+    rgba(0,0,0,.1) 1px,
+    transparent    1px,
+    transparent    40px
+  );
 }
 .marquee-track {
   font-family: 'Bebas Neue', sans-serif !important;
-  font-size: 30px !important;
+  font-size: 28px !important;
   letter-spacing: 3px !important;
-  animation: scroll 18s linear infinite !important;
+  animation: scroll 20s linear infinite !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation-play-state: paused !important; }
 }
 
 /* ============================================================
-   SECTION INTRO — typo Syne + Bebas
+   INTRO / ABOUT
    ============================================================ */
 .intro .big {
   font-family: 'Bebas Neue', sans-serif !important;
-  font-size: clamp(36px, 5.5vw, 72px) !important;
+  font-size: clamp(36px, 5.5vw, 68px) !important;
   letter-spacing: 2px !important;
   line-height: .96 !important;
 }
 .intro .seven {
   font-family: 'Bebas Neue', sans-serif !important;
-  font-size: clamp(110px, 16vw, 240px) !important;
+  font-size: clamp(100px, 15vw, 220px) !important;
   letter-spacing: -2px !important;
 }
 .intro .seven small {
   font-family: 'DM Mono', monospace !important;
   font-size: 11px !important;
   letter-spacing: 5px !important;
+  -webkit-text-fill-color: var(--light-gray) !important;
+  background: none !important;
 }
 .intro .body {
   font-family: 'Syne', sans-serif !important;
   font-size: 15px !important;
   line-height: 1.85 !important;
   color: var(--light-gray) !important;
+  max-width: 44ch !important;
 }
 
 /* ============================================================
-   SERVICES — hover plus impactant
+   SERVICES
    ============================================================ */
 .services-head h2 {
   font-family: 'Bebas Neue', sans-serif !important;
-  font-size: clamp(52px, 9vw, 120px) !important;
+  font-size: clamp(48px, 8.5vw, 110px) !important;
   letter-spacing: 3px !important;
   line-height: .9 !important;
 }
@@ -194,15 +258,23 @@ nav .links a::after {
   font-size: 11px !important;
   letter-spacing: 4px !important;
 }
+.service {
+  overflow: hidden !important;
+  /* focus visible via outline offset — ne pas retirer */
+}
+.service:focus-within {
+  outline: 2px solid var(--orange);
+  outline-offset: -2px;
+}
 .service .svc-idx {
   font-family: 'DM Mono', monospace !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
   letter-spacing: 2px !important;
   color: var(--orange) !important;
 }
 .service .svc-name {
   font-family: 'Bebas Neue', sans-serif !important;
-  font-size: clamp(32px, 5vw, 68px) !important;
+  font-size: clamp(30px, 4.5vw, 62px) !important;
   letter-spacing: 2px !important;
 }
 .service .svc-desc {
@@ -210,10 +282,7 @@ nav .links a::after {
   font-size: 14px !important;
   line-height: 1.75 !important;
 }
-/* Ligne de scan sur hover service */
-.service {
-  overflow: hidden !important;
-}
+/* Scan line traversant au hover */
 .service::after {
   content: '';
   position: absolute;
@@ -221,25 +290,26 @@ nav .links a::after {
   top: -100%;
   width: 100%;
   height: 2px;
-  background: rgba(0,0,0,.5);
-  transition: top .4s cubic-bezier(.7,0,.2,1);
+  background: rgba(0,0,0,.4);
+  transition: top var(--dur-mid) var(--ease-snap);
   z-index: 2;
+  pointer-events: none;
 }
-.service:hover::after {
-  top: 100%;
-}
+.service:hover::after { top: 110%; }
 
 /* ============================================================
-   WORK GRID — glitch reveal au hover plus brutal
+   WORK — tuiles vidéo
    ============================================================ */
 .tile video, .tile .ph {
-  transition: filter .6s ease, transform .6s ease !important;
+  transition:
+    filter    .55s var(--ease-out-expo),
+    transform .55s var(--ease-out-expo) !important;
 }
 .tile:hover video {
-  filter: grayscale(0) contrast(1.1) !important;
+  filter: grayscale(0) contrast(1.08) !important;
   transform: scale(1.04) !important;
 }
-/* glitch RGB split au hover */
+/* RGB glitch flash à l'entrée du hover */
 .tile::before {
   content: '';
   position: absolute;
@@ -249,17 +319,25 @@ nav .links a::after {
   opacity: 0;
   mix-blend-mode: screen;
   background: transparent;
-  transition: opacity .2s ease;
 }
 .tile:hover::before {
-  animation: tileGlitch .5s steps(1) 1 forwards;
+  animation: tileGlitch .45s steps(1) 1 forwards;
 }
 @keyframes tileGlitch {
-  0%  { opacity: 0; }
-  10% { opacity: 1; background: rgba(255,0,50,.12); transform: translateX(-4px); }
-  20% { opacity: 1; background: rgba(0,200,255,.1); transform: translateX(4px); }
-  30% { opacity: 0; transform: translateX(0); }
-  100%{ opacity: 0; }
+  0%   { opacity: 0; background: transparent; transform: none; }
+  15%  { opacity: 1; background: rgba(255,0,50,.1); transform: translateX(-3px); }
+  30%  { opacity: 1; background: rgba(0,200,255,.08); transform: translateX(3px); }
+  45%  { opacity: 0; background: transparent; transform: none; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile::before { animation: none !important; }
+  .tile:hover video { transform: none !important; }
+}
+/* Focus clavier sur les tuiles */
+.tile:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
 }
 .tile-label .t {
   font-family: 'Bebas Neue', sans-serif !important;
@@ -291,13 +369,14 @@ nav .links a::after {
 }
 .clients .lead strong {
   font-family: 'Bebas Neue', sans-serif !important;
-  font-size: clamp(28px, 4vw, 52px) !important;
+  font-size: clamp(26px, 3.8vw, 50px) !important;
   letter-spacing: 2px !important;
   line-height: 1 !important;
+  display: block;
 }
 
 /* ============================================================
-   CONTACT — section cinématique
+   CONTACT
    ============================================================ */
 .contact .pre {
   font-family: 'DM Mono', monospace !important;
@@ -306,26 +385,47 @@ nav .links a::after {
 }
 .contact h2 {
   font-family: 'Bebas Neue', sans-serif !important;
-  font-size: clamp(60px, 11vw, 180px) !important;
+  font-size: clamp(56px, 10.5vw, 170px) !important;
   letter-spacing: 4px !important;
   line-height: .95 !important;
-}
-.cta {
-  font-family: 'Syne', sans-serif !important;
-  font-weight: 700 !important;
-  letter-spacing: 2px !important;
-  font-size: 13px !important;
-  padding: 18px 44px !important;
-  border-radius: 0 !important; /* carré, plus brutal */
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-}
-.cta:hover {
-  transform: translateY(-2px) skewX(-2deg) !important;
 }
 .contact .mail {
   font-family: 'DM Mono', monospace !important;
   font-size: 12px !important;
   letter-spacing: 3px !important;
+}
+
+/* CTA — brutal, accessible */
+.cta {
+  font-family: 'Syne', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px !important;
+  font-size: 13px !important;
+  padding: 20px 48px !important;          /* min 44px de hauteur -> 20+20+ligne */
+  border-radius: 0 !important;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  transition:
+    transform     var(--dur-fast) var(--ease-out-expo),
+    background    var(--dur-mid)  var(--ease-in-out),
+    color         var(--dur-mid)  var(--ease-in-out),
+    box-shadow    var(--dur-mid)  var(--ease-in-out) !important;
+}
+.cta:hover {
+  transform: translateY(-2px) skewX(-1.5deg) !important;
+}
+/* Focus clavier explicite — ne jamais supprimer */
+.cta:focus-visible {
+  outline: 3px solid #fff !important;
+  outline-offset: 4px !important;
+  transform: translateY(-1px) !important;
+}
+@media (max-width: 860px) {
+  .cta {
+    clip-path: none !important;
+    border-radius: 2px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
 }
 
 /* ============================================================
@@ -338,70 +438,99 @@ footer {
 }
 
 /* ============================================================
-   VHS / GLITCH — renforcé avec chromatic aberration
+   VHS / GLITCH — chromatic aberration renforcée
    ============================================================ */
 .vhs::before {
-  color: rgba(255, 50, 0, .8) !important;
+  color: rgba(255, 50, 0, .75) !important;
   animation: vhsScanA 5s steps(1) infinite !important;
 }
 .vhs::after {
-  color: rgba(0, 200, 255, .8) !important;
+  color: rgba(0, 200, 255, .75) !important;
   animation: vhsScanB 5s steps(1) infinite !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vhs::before, .vhs::after { animation: none !important; opacity: 0 !important; }
 }
 
 /* ============================================================
-   REVEAL ANIMATIONS — plus dramatiques
+   REVEALS — dramaturgie au scroll
    ============================================================ */
 .reveal {
   opacity: 0 !important;
-  transform: translateY(60px) !important;
-  transition: opacity 1.1s cubic-bezier(.16,1,.3,1), transform 1.1s cubic-bezier(.16,1,.3,1) !important;
+  transform: translateY(56px) !important;
+  transition:
+    opacity   var(--dur-crawl) var(--ease-out-expo),
+    transform var(--dur-crawl) var(--ease-out-expo) !important;
 }
 .reveal.in {
   opacity: 1 !important;
   transform: none !important;
 }
-
-/* Reveal horizontal (depuis la gauche) */
 .reveal-left {
   opacity: 0;
-  transform: translateX(-80px);
-  transition: opacity 1s cubic-bezier(.16,1,.3,1), transform 1s cubic-bezier(.16,1,.3,1);
+  transform: translateX(-72px);
+  transition:
+    opacity   var(--dur-slow) var(--ease-out-expo),
+    transform var(--dur-slow) var(--ease-out-expo);
 }
 .reveal-left.in {
   opacity: 1;
   transform: none;
 }
-
-/* Reveal clip-path — sweep cinématique */
 .reveal-clip {
   clip-path: inset(0 100% 0 0);
-  transition: clip-path 1s cubic-bezier(.7,0,.2,1);
+  transition: clip-path var(--dur-slow) var(--ease-snap);
 }
-.reveal-clip.in {
-  clip-path: inset(0 0% 0 0);
-}
+.reveal-clip.in { clip-path: inset(0 0% 0 0); }
 
-/* Stagger pour les enfants */
+/* Stagger */
 .stagger > * {
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1);
+  transform: translateY(36px);
+  transition:
+    opacity   .8s var(--ease-out-expo),
+    transform .8s var(--ease-out-expo);
 }
-.stagger.in > *:nth-child(1) { opacity:1; transform:none; transition-delay: .1s; }
-.stagger.in > *:nth-child(2) { opacity:1; transform:none; transition-delay: .2s; }
-.stagger.in > *:nth-child(3) { opacity:1; transform:none; transition-delay: .3s; }
-.stagger.in > *:nth-child(4) { opacity:1; transform:none; transition-delay: .4s; }
-.stagger.in > *:nth-child(5) { opacity:1; transform:none; transition-delay: .5s; }
+.stagger.in > *:nth-child(1) { opacity:1; transform:none; transition-delay: .08s; }
+.stagger.in > *:nth-child(2) { opacity:1; transform:none; transition-delay: .18s; }
+.stagger.in > *:nth-child(3) { opacity:1; transform:none; transition-delay: .28s; }
+.stagger.in > *:nth-child(4) { opacity:1; transform:none; transition-delay: .38s; }
+.stagger.in > *:nth-child(5) { opacity:1; transform:none; transition-delay: .48s; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal-left, .reveal-clip, .stagger > * {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    transition: none !important;
+  }
+}
 
 /* ============================================================
-   CURSOR — version magnétique améliorée
+   LIGNE ORANGE — décoration sections
+   ============================================================ */
+.section-line {
+  display: block;
+  width: 0;
+  height: 2px;
+  background: var(--orange);
+  transition: width 1.3s var(--ease-snap);
+  margin-bottom: 40px;
+}
+.section-line.in { width: 72px; }
+
+/* ============================================================
+   CURSOR CUSTOM
    ============================================================ */
 .cursor-dot {
   width: 8px !important;
   height: 8px !important;
   background: var(--orange) !important;
   mix-blend-mode: normal !important;
+  transition:
+    width      .22s var(--ease-out-expo),
+    height     .22s var(--ease-out-expo),
+    background .22s var(--ease-out-expo),
+    opacity    .3s  ease !important;
 }
 .cursor-dot.hover-link {
   width: 40px !important;
@@ -413,46 +542,16 @@ footer {
 .cursor-dot.hover-play {
   width: 80px !important;
   height: 80px !important;
-  background: rgba(232,80,2,.9) !important;
+  background: rgba(232,80,2,.88) !important;
   border-radius: 50% !important;
 }
 
 /* ============================================================
-   SCROLL HINT
+   HALFTONE — densité renforcée
    ============================================================ */
-.scroll-hint {
-  font-family: 'DM Mono', monospace !important;
-  font-size: 9px !important;
-  letter-spacing: 4px !important;
-}
-
-/* ============================================================
-   TEXTE HALFTONE — conserver sur titres clés
-   ============================================================ */
-.halftone { background-size: 4px 4px, 100% 100% !important; }
-.ht-lg    { background-size: 8px 8px, 100% 100% !important; }
-.ht-xl    { background-size: 6px 6px, 100% 100% !important; }
-
-/* ============================================================
-   LIGNE ORANGE ANIMÉE — décoration sections
-   ============================================================ */
-.section-line {
-  display: block;
-  width: 0;
-  height: 2px;
-  background: var(--orange);
-  transition: width 1.2s cubic-bezier(.7,0,.2,1);
-  margin-bottom: 40px;
-}
-.section-line.in { width: 80px; }
-
-/* ============================================================
-   NOISE OVERLAY sur hero — plus visible
-   ============================================================ */
-.grain-strong {
-  opacity: .22 !important;
-  animation: grainShift .3s steps(3) infinite !important;
-}
+.halftone { background-size: 4px 4px,   100% 100% !important; }
+.ht-lg    { background-size: 8px 8px,   100% 100% !important; }
+.ht-xl    { background-size: 6px 6px,   100% 100% !important; }
 
 /* ============================================================
    SELECTION
@@ -460,13 +559,4 @@ footer {
 ::selection {
   background: var(--orange) !important;
   color: #000 !important;
-}
-
-/* ============================================================
-   RESPONSIVE ADJUSTMENTS
-   ============================================================ */
-@media(max-width:860px){
-  nav { padding: 16px 20px !important; }
-  nav.scrolled { padding: 12px 20px !important; }
-  .cta { clip-path: none !important; }
 }
